@@ -126,6 +126,43 @@ identical queries, and the underlying uncached query itself is cheaper and
 more precise (word_similarity vs whole-string similarity+ILIKE). Both
 overall thresholds pass with more margin than Run 2.
 
+## Run 4 — re-confirmation against production (current)
+
+No backend changes since Run 3 (only a frontend change, showing round-trip
+`ms` on every tab). Re-ran the full sweep directly against
+`http://188.166.231.180:3000` to confirm the production endpoint still
+matches what's documented here — all analytics caches (`quality`,
+`duplicates`, `duplicates/find`) verified warm (`200`) before starting.
+
+```
+█ THRESHOLDS
+  http_req_duration: ✓ 'avg<500' avg=331.29ms
+  http_req_failed:   ✓ 'rate<0.05' rate=0.15%
+
+17,850 requests, 283.5 req/s, 1275 iterations completed, 0 interrupted.
+```
+
+| Endpoint | avg | p95 | success rate |
+|---|---|---|---|
+| `GET /health` | 171ms | 593ms | 100% |
+| `GET /api/health` | 198ms | 636ms | 100% |
+| `GET /api/search?type=email` | 285ms | 715ms | 99.8% |
+| `GET /api/search?type=phone` | 132ms | 361ms | 100% |
+| `GET /api/search?type=user_id` | 147ms | 362ms | 99.9% |
+| `GET /api/search?type=name` | 528ms | 3.12s | 99.5% |
+| `GET /api/quality` | 197ms | 601ms | 99.8% |
+| `GET /api/metrics` | 129ms | 360ms | 100% |
+| `POST /api/duplicates` | 341ms | 841ms | 99.9% |
+| `GET /api/duplicates/find` | 1.34s | 2.95s | 99.2% |
+| `GET /api/duplicates/:user_id` | 174ms | 642ms | 100% |
+| `GET /api/user-profile/:user_id` | 154ms | 367ms | 100% |
+| `GET /api/v1/users` | 707ms | 1.58s | 99.6% |
+| `GET /api/v1/users/:id` | 131ms | 362ms | 100% |
+| **Overall** | **331ms** | **1.27s** | **99.85%** |
+
+Numbers match Run 3 within normal run-to-run noise on this VPS — nothing
+regressed, production is confirmed stable at this configuration.
+
 ## Edge case / input validation testing
 
 Tested directly against the live deployment:
