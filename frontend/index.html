@@ -315,6 +315,7 @@
       </div>
       <div class="loading" id="profile-loading">memuat...</div>
       <div class="error" id="profile-error"></div>
+      <div class="meta" id="profile-meta"></div>
       <div id="profile-cards" class="grid" style="margin-top:1.1rem;"></div>
     </div>
   </section>
@@ -337,10 +338,16 @@ function fmtDate(s) { return s ? new Date(s).toLocaleString('id-ID') : '-'; }
 function esc(s) { return s == null ? '' : String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 function missingTag() { return '<span class="tag tag-missing">missing</span>'; }
 
+// Measures round-trip time client-side (not just the server's own took_ms,
+// which only /api/search reports) so every tab can show "how long did that
+// just take" regardless of what the endpoint returns.
 async function apiFetch(path, opts) {
+  const start = performance.now();
   const res = await fetch(`${API_BASE}${path}`, opts);
   const body = await res.json().catch(() => ({}));
+  const ms = Math.round(performance.now() - start);
   if (!res.ok) throw new Error(body.error || `HTTP ${res.status}`);
+  if (body && typeof body === 'object') body.__ms = ms;
   return body;
 }
 
@@ -398,7 +405,7 @@ async function checkHealth() {
   try {
     const h = await apiFetch('/api/health');
     dot.className = 'dot ok';
-    text.textContent = `${h.status.toUpperCase()} · ${fmtNum(h.total_records)} USERS`;
+    text.textContent = `${h.status.toUpperCase()} · ${fmtNum(h.total_records)} USERS · ${h.__ms} ms`;
   } catch (e) {
     dot.className = 'dot bad';
     text.textContent = 'API DISCONNECTED';
@@ -451,7 +458,7 @@ async function runSearch(resetOffset) {
       document.getElementById('search-prev').disabled = searchOffset === 0;
       document.getElementById('search-next').disabled = searchOffset + SEARCH_LIMIT >= data.total;
     }
-    metaEl.textContent = `${fmtNum(data.total)} hasil · ${fmtMs(data.took_ms)}`;
+    metaEl.textContent = `${fmtNum(data.total)} hasil · server ${fmtMs(data.took_ms)} · round-trip ${data.__ms} ms`;
   } catch (e) {
     showError(errEl, e.message);
   } finally {
@@ -486,7 +493,7 @@ async function loadQuality() {
   try {
     const [data, metrics] = await Promise.all([apiFetch('/api/quality'), apiFetch('/api/metrics')]);
     const m = data.quality_metrics;
-    metaEl.textContent = `${fmtNum(data.total_records)} records · dianalisis ${fmtDate(data.analyzed_at)}`;
+    metaEl.textContent = `${fmtNum(data.total_records)} records · dianalisis ${fmtDate(data.analyzed_at)} · ${data.__ms} ms`;
 
     const existingOverview = document.querySelector('[data-quality-overview]');
     if (existingOverview) existingOverview.remove();
@@ -573,7 +580,7 @@ async function loadDuplicatesByIP() {
         <td><span class="tag tag-high">${esc(g.confidence)}</span></td>`;
       tbody.appendChild(tr);
     }
-    metaEl.textContent = `${fmtNum(data.total_groups_found)} grup ditemukan · ${fmtNum(data.total_duplicate_users)} user terlibat`;
+    metaEl.textContent = `${fmtNum(data.total_groups_found)} grup ditemukan · ${fmtNum(data.total_duplicate_users)} user terlibat · ${data.__ms} ms`;
     tableEl.style.display = 'table';
 
     const existingChart = document.querySelector('[data-dup-chart]');
@@ -615,7 +622,7 @@ async function loadDuplicatesExact() {
       tr.innerHTML = `<td class="mono">${esc(d.id1)}</td><td class="mono">${esc(d.id2)}</td><td>${esc(d.match_type)}</td><td class="mono">${esc(d.similarity)}</td>`;
       tbody.appendChild(tr);
     }
-    metaEl.textContent = `${fmtNum(data.count)} pasangan duplikat (exact email/phone match)`;
+    metaEl.textContent = `${fmtNum(data.count)} pasangan duplikat (exact email/phone match) · ${data.__ms} ms`;
     tableEl.style.display = 'table';
   } catch (e) {
     showError(errEl, e.message);
@@ -632,12 +639,14 @@ async function loadProfile() {
   const loadingEl = document.getElementById('profile-loading');
   const errEl = document.getElementById('profile-error');
   const cardsEl = document.getElementById('profile-cards');
-  hideError(errEl); cardsEl.innerHTML = '';
+  const metaEl = document.getElementById('profile-meta');
+  hideError(errEl); cardsEl.innerHTML = ''; metaEl.textContent = '';
   if (!id) { showError(errEl, 'Masukkan user_id.'); return; }
   if (!/^\d+$/.test(id)) { showError(errEl, 'user_id harus berupa angka, contoh: 53462510.'); return; }
   loadingEl.style.display = 'block';
   try {
     const p = await apiFetch(`/api/user-profile/${encodeURIComponent(id)}`);
+    metaEl.textContent = `${p.__ms} ms`;
     const card = (title, big, sub) => {
       const div = document.createElement('div');
       div.className = 'card';
