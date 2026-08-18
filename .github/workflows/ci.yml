@@ -1,0 +1,36 @@
+name: CI
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+    branches: [main]
+
+jobs:
+  backend:
+    name: Backend build & vet
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.26"
+          cache-dependency-path: backend/go.sum
+      - name: go build
+        working-directory: backend
+        run: go build ./...
+      - name: go vet
+        working-directory: backend
+        run: go vet ./...
+
+  compose-and-images:
+    name: Validate compose & build images
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate docker-compose.yaml
+        run: DB_PASSWORD=ci-placeholder docker compose config -q
+      - name: Build backend image
+        run: docker build -t 17an-backend:ci ./backend
+      - name: Build frontend image
+        run: docker build -t 17an-frontend:ci ./frontend

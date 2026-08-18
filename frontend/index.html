@@ -3,72 +3,172 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Customer Intelligence Platform</title>
+<title>17AN // Customer Intelligence</title>
 <style>
   :root {
-    --bg: #0f1117; --panel: #171a24; --border: #2a2e3d;
-    --text: #e7e9ee; --muted: #9aa0ae; --accent: #4f8cff;
-    --ok: #34c77b; --warn: #f5a623; --bad: #f2545b;
+    --paper: #f4f1ea;
+    --ink: #111111;
+    --yellow: #ffd400;
+    --red: #ff3b30;
+    --green: #00b86b;
+    --blue: #1e5eff;
+    --shadow: 6px 6px 0 var(--ink);
+    --shadow-sm: 3px 3px 0 var(--ink);
+    --mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
+    --grotesk: "Archivo Narrow", "Helvetica Neue", Arial, sans-serif;
   }
   * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
   body {
-    margin: 0; font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
-    background: var(--bg); color: var(--text);
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--grotesk);
+    -webkit-font-smoothing: antialiased;
+    background-image:
+      linear-gradient(var(--ink) 1px, transparent 1px),
+      linear-gradient(90deg, var(--ink) 1px, transparent 1px);
+    background-size: 28px 28px;
+    background-position: -1px -1px;
+    background-attachment: fixed;
+    background-color: var(--paper);
   }
+  /* faint grid; keep it quiet under content panels */
+  body { background-image:
+      linear-gradient(rgba(17,17,17,.05) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(17,17,17,.05) 1px, transparent 1px); }
+
   header {
     display: flex; align-items: center; justify-content: space-between;
-    padding: 1rem 1.5rem; border-bottom: 1px solid var(--border);
-    flex-wrap: wrap; gap: .75rem;
+    gap: 1rem; flex-wrap: wrap;
+    padding: 1.1rem 1.5rem;
+    background: var(--ink); color: var(--paper);
+    border-bottom: 4px solid var(--ink);
   }
-  header h1 { font-size: 1.1rem; margin: 0; }
+  header .brand { display: flex; align-items: baseline; gap: .6rem; }
+  header .brand .mark {
+    background: var(--yellow); color: var(--ink);
+    font-family: var(--mono); font-weight: 800; font-size: .75rem;
+    padding: .2rem .4rem; border: 2px solid var(--paper);
+  }
+  header h1 {
+    font-size: 1.15rem; margin: 0; font-weight: 800; letter-spacing: .01em;
+    text-transform: uppercase;
+  }
   #health-badge {
-    font-size: .85rem; padding: .3rem .7rem; border-radius: 999px;
-    border: 1px solid var(--border); display: flex; align-items: center; gap: .4rem;
+    font-family: var(--mono); font-size: .78rem; font-weight: 700;
+    padding: .35rem .65rem; border: 2px solid var(--paper);
+    display: flex; align-items: center; gap: .5rem; background: var(--ink);
   }
-  .dot { width: .5rem; height: .5rem; border-radius: 50%; background: var(--muted); }
-  .dot.ok { background: var(--ok); } .dot.bad { background: var(--bad); }
+  .dot { width: .6rem; height: .6rem; background: #666; flex: none; }
+  .dot.ok { background: var(--green); }
+  .dot.bad { background: var(--red); }
 
-  nav { display: flex; gap: .5rem; padding: 0 1.5rem; border-bottom: 1px solid var(--border); overflow-x: auto; }
+  nav {
+    display: flex; gap: 0; border-bottom: 4px solid var(--ink);
+    overflow-x: auto; background: var(--paper);
+  }
   nav button {
-    background: none; border: none; color: var(--muted); padding: .8rem 1rem;
-    cursor: pointer; font-size: .9rem; border-bottom: 2px solid transparent; white-space: nowrap;
+    background: var(--paper); border: none; border-right: 3px solid var(--ink);
+    color: var(--ink); padding: .85rem 1.2rem; cursor: pointer;
+    font-size: .85rem; font-weight: 800; text-transform: uppercase; letter-spacing: .04em;
+    white-space: nowrap; font-family: var(--grotesk);
   }
-  nav button.active { color: var(--text); border-color: var(--accent); }
+  nav button:hover { background: #e9e5da; }
+  nav button.active { background: var(--yellow); }
 
-  main { padding: 1.5rem; max-width: 1100px; margin: 0 auto; }
+  main { padding: 1.5rem; max-width: 1140px; margin: 0 auto; }
   section { display: none; }
   section.active { display: block; }
 
-  .panel { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 1.25rem; margin-bottom: 1rem; }
-  .row { display: flex; gap: .6rem; flex-wrap: wrap; align-items: center; }
-  input, select, button.action {
-    background: #11141c; border: 1px solid var(--border); color: var(--text);
-    padding: .55rem .7rem; border-radius: 6px; font-size: .9rem;
+  .panel {
+    background: #fff; border: 3px solid var(--ink); box-shadow: var(--shadow);
+    padding: 1.4rem; margin-bottom: 1.6rem;
   }
-  input { flex: 1; min-width: 180px; }
-  button.action { background: var(--accent); border-color: var(--accent); color: #fff; cursor: pointer; font-weight: 600; }
-  button.action:hover { opacity: .9; }
-  button.action:disabled { opacity: .5; cursor: default; }
-  button.secondary { background: #11141c; border-color: var(--border); color: var(--text); cursor: pointer; }
+  .row { display: flex; gap: .7rem; flex-wrap: wrap; align-items: center; }
 
-  table { width: 100%; border-collapse: collapse; margin-top: 1rem; font-size: .85rem; }
-  th, td { text-align: left; padding: .5rem .6rem; border-bottom: 1px solid var(--border); white-space: nowrap; }
-  th { color: var(--muted); font-weight: 600; }
-  td.mono { font-family: ui-monospace, monospace; }
+  input, select {
+    background: var(--paper); border: 3px solid var(--ink); color: var(--ink);
+    padding: .6rem .75rem; font-size: .9rem; font-family: var(--grotesk);
+    font-weight: 600;
+  }
+  input::placeholder { color: #777; font-weight: 500; }
+  input { flex: 1; min-width: 200px; }
+  input:focus, select:focus { outline: 3px solid var(--blue); outline-offset: 1px; }
 
-  .meta { color: var(--muted); font-size: .8rem; margin-top: .5rem; }
-  .error { color: var(--bad); font-size: .85rem; margin-top: .5rem; }
-  .loading { color: var(--muted); font-size: .85rem; margin-top: .5rem; }
+  button.action, button.secondary {
+    border: 3px solid var(--ink); padding: .6rem 1.1rem; cursor: pointer;
+    font-weight: 800; font-size: .85rem; text-transform: uppercase; letter-spacing: .03em;
+    font-family: var(--grotesk); box-shadow: var(--shadow-sm);
+    transition: transform .06s ease, box-shadow .06s ease;
+  }
+  button.action { background: var(--yellow); color: var(--ink); }
+  button.secondary { background: #fff; color: var(--ink); }
+  button.action:active, button.secondary:active {
+    transform: translate(3px, 3px); box-shadow: 0 0 0 var(--ink);
+  }
+  button.action:disabled, button.secondary:disabled {
+    opacity: .4; cursor: default; box-shadow: none; transform: none;
+  }
 
-  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: .8rem; }
-  .card { background: #11141c; border: 1px solid var(--border); border-radius: 8px; padding: 1rem; }
-  .card h3 { margin: 0 0 .5rem; font-size: .8rem; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: .04em; }
-  .card .big { font-size: 1.6rem; font-weight: 700; }
-  .bar { height: 6px; border-radius: 999px; background: var(--border); margin-top: .6rem; overflow: hidden; }
-  .bar > span { display: block; height: 100%; background: var(--accent); }
+  table { width: 100%; border-collapse: collapse; margin-top: 1.1rem; font-size: .85rem; }
+  th, td {
+    text-align: left; padding: .55rem .65rem; border-bottom: 2px solid var(--ink);
+    white-space: nowrap;
+  }
+  thead th {
+    background: var(--ink); color: var(--paper); font-weight: 800;
+    text-transform: uppercase; letter-spacing: .03em; font-size: .72rem;
+    border-bottom: 3px solid var(--ink);
+  }
+  tbody tr:hover { background: #fff7d1; }
+  td.mono, th.mono { font-family: var(--mono); }
+  td.mono { font-family: var(--mono); font-size: .82rem; }
+
+  .tag {
+    display: inline-block; font-family: var(--mono); font-size: .68rem; font-weight: 800;
+    padding: .15rem .4rem; border: 2px solid var(--ink); text-transform: uppercase;
+    background: var(--paper);
+  }
+  .tag-missing { background: #eee; color: #888; border-color: #bbb; }
+  .tag-high { background: var(--red); color: #fff; }
+  .tag-medium { background: var(--yellow); color: var(--ink); }
+  .tag-low { background: #ddd; color: var(--ink); }
+
+  .meta { font-family: var(--mono); font-size: .78rem; margin-top: .6rem; color: #333; }
+  .error {
+    font-family: var(--mono); font-size: .82rem; margin-top: .7rem; padding: .6rem .8rem;
+    background: var(--red); color: #fff; border: 2px solid var(--ink); display: none;
+  }
+  .loading {
+    font-family: var(--mono); font-size: .8rem; margin-top: .7rem; color: var(--ink);
+    display: none;
+  }
+  .loading::before { content: "> "; font-weight: 800; }
+
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 1rem; }
+  .card {
+    background: var(--paper); border: 3px solid var(--ink); box-shadow: var(--shadow-sm);
+    padding: 1.1rem;
+  }
+  .card h3 {
+    margin: 0 0 .6rem; font-size: .75rem; font-weight: 800; text-transform: uppercase;
+    letter-spacing: .05em; display: flex; align-items: center; gap: .4rem;
+  }
+  .card h3::before { content: ""; width: .55rem; height: .55rem; background: var(--ink); display: inline-block; }
+  .card .big { font-size: 2rem; font-weight: 800; font-family: var(--mono); line-height: 1; }
+  .card .meta { margin-top: .7rem; line-height: 1.5; }
+  .bar { height: 10px; background: #fff; border: 2px solid var(--ink); margin-top: .7rem; overflow: hidden; }
+  .bar > span { display: block; height: 100%; background: var(--ink); }
+
+  footer {
+    border-top: 4px solid var(--ink); padding: .9rem 1.5rem; font-family: var(--mono);
+    font-size: .72rem; color: #555; display: flex; justify-content: space-between; flex-wrap: wrap; gap: .5rem;
+  }
 
   @media (max-width: 640px) {
     header, main { padding: 1rem; }
+    header h1 { font-size: 1rem; }
+    .panel { padding: 1rem; box-shadow: 4px 4px 0 var(--ink); }
     th, td { white-space: normal; }
   }
 </style>
@@ -76,15 +176,18 @@
 <body>
 
 <header>
-  <h1>🔍 Customer Intelligence Platform</h1>
-  <div id="health-badge"><span class="dot"></span><span id="health-text">checking...</span></div>
+  <div class="brand">
+    <span class="mark">17AN</span>
+    <h1>Customer Intelligence</h1>
+  </div>
+  <div id="health-badge"><span class="dot"></span><span id="health-text">CHECKING&hellip;</span></div>
 </header>
 
 <nav>
-  <button data-tab="search" class="active">Search</button>
-  <button data-tab="quality">Data Quality</button>
-  <button data-tab="duplicates">Duplicates</button>
-  <button data-tab="profile">User Profile</button>
+  <button data-tab="search" class="active">01 · Search</button>
+  <button data-tab="quality">02 · Data Quality</button>
+  <button data-tab="duplicates">03 · Duplicates</button>
+  <button data-tab="profile">04 · User Profile</button>
 </nav>
 
 <main>
@@ -93,18 +196,18 @@
   <section id="tab-search" class="active">
     <div class="panel">
       <div class="row">
-        <input id="search-q" placeholder="Cari email / phone / user_id / nama..." />
+        <input id="search-q" placeholder="cari email / phone / user_id / nama..." />
         <select id="search-type">
           <option value="name">Nama (fuzzy)</option>
           <option value="email">Email (exact)</option>
           <option value="phone">Phone (exact)</option>
           <option value="user_id">User ID (exact)</option>
         </select>
-        <button class="action" id="search-btn">Cari</button>
+        <button class="action" id="search-btn">Cari &rarr;</button>
       </div>
       <div class="meta" id="search-meta"></div>
-      <div class="loading" id="search-loading" style="display:none;">Mencari...</div>
-      <div class="error" id="search-error" style="display:none;"></div>
+      <div class="loading" id="search-loading">mencari...</div>
+      <div class="error" id="search-error"></div>
       <div style="overflow-x:auto;">
         <table id="search-table" style="display:none;">
           <thead>
@@ -113,7 +216,7 @@
           <tbody></tbody>
         </table>
       </div>
-      <div class="row" id="search-pagination" style="display:none; margin-top:.75rem;">
+      <div class="row" id="search-pagination" style="display:none; margin-top:.9rem;">
         <button class="secondary" id="search-prev">&larr; Prev</button>
         <span class="meta" id="search-page-label"></span>
         <button class="secondary" id="search-next">Next &rarr;</button>
@@ -125,14 +228,14 @@
   <section id="tab-quality">
     <div class="panel">
       <div class="row">
-        <button class="action" id="quality-refresh">Refresh Quality Report</button>
+        <button class="action" id="quality-refresh">Refresh Report</button>
         <span class="meta" id="quality-meta"></span>
       </div>
-      <div class="loading" id="quality-loading" style="display:none;">Menghitung...</div>
-      <div class="error" id="quality-error" style="display:none;"></div>
-      <div id="quality-cards" class="grid" style="margin-top:1rem;"></div>
+      <div class="loading" id="quality-loading">menghitung...</div>
+      <div class="error" id="quality-error"></div>
+      <div id="quality-cards" class="grid" style="margin-top:1.1rem;"></div>
       <div style="overflow-x:auto;">
-        <table id="quality-issues" style="display:none; margin-top:1.5rem;">
+        <table id="quality-issues" style="display:none; margin-top:1.6rem;">
           <thead><tr><th>Field</th><th>Issue</th><th>Count</th><th>Severity</th><th>Contoh</th></tr></thead>
           <tbody></tbody>
         </table>
@@ -144,11 +247,11 @@
   <section id="tab-duplicates">
     <div class="panel">
       <div class="row">
-        <button class="action" id="dup-ip-btn">Cari Duplikat via IP Address</button>
-        <button class="secondary" id="dup-exact-btn">Cari Duplikat Email/Phone Exact</button>
+        <button class="action" id="dup-ip-btn">Duplikat via IP</button>
+        <button class="secondary" id="dup-exact-btn">Duplikat Email/Phone Exact</button>
       </div>
-      <div class="loading" id="dup-loading" style="display:none;">Mencari duplikat...</div>
-      <div class="error" id="dup-error" style="display:none;"></div>
+      <div class="loading" id="dup-loading">mencari duplikat...</div>
+      <div class="error" id="dup-error"></div>
       <div class="meta" id="dup-meta"></div>
       <div style="overflow-x:auto;">
         <table id="dup-table" style="display:none;">
@@ -164,23 +267,30 @@
     <div class="panel">
       <div class="row">
         <input id="profile-id" placeholder="user_id, misal: 18217221" />
-        <button class="action" id="profile-btn">Lihat Profile</button>
+        <button class="action" id="profile-btn">Lihat Profile &rarr;</button>
       </div>
-      <div class="loading" id="profile-loading" style="display:none;">Memuat...</div>
-      <div class="error" id="profile-error" style="display:none;"></div>
-      <div id="profile-cards" class="grid" style="margin-top:1rem;"></div>
+      <div class="loading" id="profile-loading">memuat...</div>
+      <div class="error" id="profile-error"></div>
+      <div id="profile-cards" class="grid" style="margin-top:1.1rem;"></div>
     </div>
   </section>
 
 </main>
 
+<footer>
+  <span id="api-base-label"></span>
+  <span>15M records · postgres · fiber+gorm</span>
+</footer>
+
 <script>
 const API_BASE = `${location.protocol}//${location.hostname}:3000`;
+document.getElementById('api-base-label').textContent = `API ${API_BASE}`;
 
 function fmtMs(ms) { return ms == null ? '-' : `${ms} ms`; }
 function fmtNum(n) { return n == null ? '-' : Number(n).toLocaleString('id-ID'); }
 function fmtDate(s) { return s ? new Date(s).toLocaleString('id-ID') : '-'; }
 function esc(s) { return s == null ? '' : String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function missingTag() { return '<span class="tag tag-missing">missing</span>'; }
 
 async function apiFetch(path, opts) {
   const res = await fetch(`${API_BASE}${path}`, opts);
@@ -188,6 +298,9 @@ async function apiFetch(path, opts) {
   if (!res.ok) throw new Error(body.error || `HTTP ${res.status}`);
   return body;
 }
+
+function showError(el, msg) { el.textContent = msg; el.style.display = 'block'; }
+function hideError(el) { el.style.display = 'none'; }
 
 // ---- Tabs ----
 document.querySelectorAll('nav button').forEach(btn => {
@@ -206,10 +319,10 @@ async function checkHealth() {
   try {
     const h = await apiFetch('/api/health');
     dot.className = 'dot ok';
-    text.textContent = `${h.status} · ${fmtNum(h.total_records)} users`;
+    text.textContent = `${h.status.toUpperCase()} · ${fmtNum(h.total_records)} USERS`;
   } catch (e) {
     dot.className = 'dot bad';
-    text.textContent = 'API tidak terhubung';
+    text.textContent = 'API DISCONNECTED';
   }
 }
 checkHealth();
@@ -228,10 +341,10 @@ async function runSearch(resetOffset) {
   const tableEl = document.getElementById('search-table');
   const metaEl = document.getElementById('search-meta');
   const pagEl = document.getElementById('search-pagination');
-  errEl.style.display = 'none';
+  hideError(errEl);
   tableEl.style.display = 'none';
   pagEl.style.display = 'none';
-  if (!q) { errEl.textContent = 'Masukkan kata kunci pencarian.'; errEl.style.display = 'block'; return; }
+  if (!q) { showError(errEl, 'Masukkan kata kunci pencarian.'); return; }
 
   loadingEl.style.display = 'block';
   try {
@@ -239,30 +352,29 @@ async function runSearch(resetOffset) {
     const tbody = tableEl.querySelector('tbody');
     tbody.innerHTML = '';
     if (!data.results || data.results.length === 0) {
-      metaEl.textContent = `Tidak ada hasil untuk "${q}".`;
+      metaEl.textContent = `tidak ada hasil untuk "${q}"`;
     } else {
       for (const r of data.results) {
         const tr = document.createElement('tr');
         tr.innerHTML = `
           <td class="mono">${esc(r.user_id)}</td>
           <td>${esc(r.full_name) || '-'}</td>
-          <td>${esc(r.user_email) || '<span style="color:var(--muted)">missing</span>'}</td>
-          <td>${esc(r.msisdn) || '<span style="color:var(--muted)">missing</span>'}</td>
+          <td>${esc(r.user_email) || missingTag()}</td>
+          <td>${esc(r.msisdn) || missingTag()}</td>
           <td>${esc(r.status)}</td>
-          <td>${fmtDate(r.created_at)}</td>`;
+          <td class="mono">${fmtDate(r.created_at)}</td>`;
         tbody.appendChild(tr);
       }
       tableEl.style.display = 'table';
       pagEl.style.display = 'flex';
       document.getElementById('search-page-label').textContent =
-        `${searchOffset + 1}-${searchOffset + data.results.length} dari ${fmtNum(data.total)}`;
+        `${searchOffset + 1}-${searchOffset + data.results.length} / ${fmtNum(data.total)}`;
       document.getElementById('search-prev').disabled = searchOffset === 0;
       document.getElementById('search-next').disabled = searchOffset + SEARCH_LIMIT >= data.total;
     }
     metaEl.textContent = `${fmtNum(data.total)} hasil · ${fmtMs(data.took_ms)}`;
   } catch (e) {
-    errEl.textContent = e.message;
-    errEl.style.display = 'block';
+    showError(errEl, e.message);
   } finally {
     loadingEl.style.display = 'none';
   }
@@ -278,7 +390,7 @@ function qualityCard(title, presentPct, lines) {
   div.className = 'card';
   div.innerHTML = `<h3>${esc(title)}</h3><div class="big">${presentPct}</div>
     <div class="bar"><span style="width:${Math.max(0, Math.min(100, parseFloat(presentPct)))}%"></span></div>
-    <div class="meta" style="margin-top:.6rem;">${lines.join('<br>')}</div>`;
+    <div class="meta">${lines.join('<br>')}</div>`;
   return div;
 }
 
@@ -288,7 +400,7 @@ async function loadQuality() {
   const cardsEl = document.getElementById('quality-cards');
   const issuesEl = document.getElementById('quality-issues');
   const metaEl = document.getElementById('quality-meta');
-  errEl.style.display = 'none';
+  hideError(errEl);
   loadingEl.style.display = 'block';
   cardsEl.innerHTML = '';
   issuesEl.style.display = 'none';
@@ -316,22 +428,21 @@ async function loadQuality() {
     const statusDiv = document.createElement('div');
     statusDiv.className = 'card';
     statusDiv.innerHTML = `<h3>Status Distribution</h3>` +
-      Object.entries(m.status.distribution).map(([k, v]) => `<div style="margin-top:.3rem;">${esc(k)}: <b>${fmtNum(v)}</b></div>`).join('');
+      Object.entries(m.status.distribution).map(([k, v]) => `<div style="margin-top:.35rem; font-family:var(--mono);">${esc(k)}: <b>${fmtNum(v)}</b></div>`).join('');
     cardsEl.appendChild(statusDiv);
 
     const tbody = issuesEl.querySelector('tbody');
     tbody.innerHTML = '';
     for (const issue of (data.data_issues || [])) {
       const tr = document.createElement('tr');
-      const color = issue.severity === 'high' ? 'var(--bad)' : issue.severity === 'medium' ? 'var(--warn)' : 'var(--muted)';
-      tr.innerHTML = `<td>${esc(issue.field)}</td><td>${esc(issue.issue_type)}</td><td>${fmtNum(issue.count)}</td>
-        <td style="color:${color}">${esc(issue.severity)}</td><td class="mono">${(issue.examples || []).map(esc).join(', ')}</td>`;
+      const tagClass = issue.severity === 'high' ? 'tag-high' : issue.severity === 'medium' ? 'tag-medium' : 'tag-low';
+      tr.innerHTML = `<td>${esc(issue.field)}</td><td>${esc(issue.issue_type)}</td><td class="mono">${fmtNum(issue.count)}</td>
+        <td><span class="tag ${tagClass}">${esc(issue.severity)}</span></td><td class="mono">${(issue.examples || []).map(esc).join(', ')}</td>`;
       tbody.appendChild(tr);
     }
     if (data.data_issues && data.data_issues.length) issuesEl.style.display = 'table';
   } catch (e) {
-    errEl.textContent = e.message;
-    errEl.style.display = 'block';
+    showError(errEl, e.message);
   } finally {
     loadingEl.style.display = 'none';
   }
@@ -344,7 +455,7 @@ async function loadDuplicatesByIP() {
   const errEl = document.getElementById('dup-error');
   const tableEl = document.getElementById('dup-table');
   const metaEl = document.getElementById('dup-meta');
-  errEl.style.display = 'none'; tableEl.style.display = 'none';
+  hideError(errEl); tableEl.style.display = 'none';
   loadingEl.style.display = 'block';
   try {
     const data = await apiFetch('/api/duplicates/find?method=ip_address&limit=20');
@@ -355,15 +466,15 @@ async function loadDuplicatesByIP() {
     for (const g of data.duplicate_groups) {
       const tr = document.createElement('tr');
       const ids = (g.user_ids || []).slice(0, 6).join(', ') + (g.user_ids.length > 6 ? ', ...' : '');
-      tr.innerHTML = `<td class="mono">${esc(g.shared_attribute)}</td><td>${fmtNum(g.user_count)}</td>
-        <td class="mono">${esc(ids)}</td><td>${fmtDate(g.first_activity)}</td><td>${fmtDate(g.last_activity)}</td>
-        <td>${esc(g.confidence)}</td>`;
+      tr.innerHTML = `<td class="mono">${esc(g.shared_attribute)}</td><td class="mono">${fmtNum(g.user_count)}</td>
+        <td class="mono">${esc(ids)}</td><td class="mono">${fmtDate(g.first_activity)}</td><td class="mono">${fmtDate(g.last_activity)}</td>
+        <td><span class="tag tag-high">${esc(g.confidence)}</span></td>`;
       tbody.appendChild(tr);
     }
     metaEl.textContent = `${fmtNum(data.total_groups_found)} grup ditemukan · ${fmtNum(data.total_duplicate_users)} user terlibat`;
     tableEl.style.display = 'table';
   } catch (e) {
-    errEl.textContent = e.message; errEl.style.display = 'block';
+    showError(errEl, e.message);
   } finally {
     loadingEl.style.display = 'none';
   }
@@ -374,7 +485,7 @@ async function loadDuplicatesExact() {
   const errEl = document.getElementById('dup-error');
   const tableEl = document.getElementById('dup-table');
   const metaEl = document.getElementById('dup-meta');
-  errEl.style.display = 'none'; tableEl.style.display = 'none';
+  hideError(errEl); tableEl.style.display = 'none';
   loadingEl.style.display = 'block';
   try {
     const data = await apiFetch('/api/duplicates', {
@@ -385,13 +496,13 @@ async function loadDuplicatesExact() {
     tbody.innerHTML = '';
     for (const d of data.duplicates) {
       const tr = document.createElement('tr');
-      tr.innerHTML = `<td class="mono">${esc(d.id1)}</td><td class="mono">${esc(d.id2)}</td><td>${esc(d.match_type)}</td><td>${esc(d.similarity)}</td>`;
+      tr.innerHTML = `<td class="mono">${esc(d.id1)}</td><td class="mono">${esc(d.id2)}</td><td>${esc(d.match_type)}</td><td class="mono">${esc(d.similarity)}</td>`;
       tbody.appendChild(tr);
     }
     metaEl.textContent = `${fmtNum(data.count)} pasangan duplikat (exact email/phone match)`;
     tableEl.style.display = 'table';
   } catch (e) {
-    errEl.textContent = e.message; errEl.style.display = 'block';
+    showError(errEl, e.message);
   } finally {
     loadingEl.style.display = 'none';
   }
@@ -405,15 +516,15 @@ async function loadProfile() {
   const loadingEl = document.getElementById('profile-loading');
   const errEl = document.getElementById('profile-error');
   const cardsEl = document.getElementById('profile-cards');
-  errEl.style.display = 'none'; cardsEl.innerHTML = '';
-  if (!id) { errEl.textContent = 'Masukkan user_id.'; errEl.style.display = 'block'; return; }
+  hideError(errEl); cardsEl.innerHTML = '';
+  if (!id) { showError(errEl, 'Masukkan user_id.'); return; }
   loadingEl.style.display = 'block';
   try {
     const p = await apiFetch(`/api/user-profile/${encodeURIComponent(id)}`);
     const card = (title, big, sub) => {
       const div = document.createElement('div');
       div.className = 'card';
-      div.innerHTML = `<h3>${esc(title)}</h3><div class="big">${big}</div><div class="meta" style="margin-top:.5rem;">${sub}</div>`;
+      div.innerHTML = `<h3>${esc(title)}</h3><div class="big">${big}</div><div class="meta">${sub}</div>`;
       return div;
     };
     cardsEl.appendChild(card('Profil', esc(p.full_name) || '-', `ID: ${esc(p.user_id)}<br>${esc(p.user_email) || 'no email'}<br>${esc(p.msisdn) || 'no phone'}`));
@@ -421,7 +532,7 @@ async function loadProfile() {
     cardsEl.appendChild(card('Total Transaksi', `Rp ${fmtNum(p.total_transaction_amount)}`, 'Akumulasi seluruh transaksi'));
     cardsEl.appendChild(card('Aktivitas', fmtNum(p.activity_count), `Terakhir: ${fmtDate(p.last_activity)}`));
   } catch (e) {
-    errEl.textContent = e.message; errEl.style.display = 'block';
+    showError(errEl, e.message);
   } finally {
     loadingEl.style.display = 'none';
   }
