@@ -518,6 +518,7 @@ async function loadProfile() {
   const cardsEl = document.getElementById('profile-cards');
   hideError(errEl); cardsEl.innerHTML = '';
   if (!id) { showError(errEl, 'Masukkan user_id.'); return; }
+  if (!/^\d+$/.test(id)) { showError(errEl, 'user_id harus berupa angka, contoh: 53462510.'); return; }
   loadingEl.style.display = 'block';
   try {
     const p = await apiFetch(`/api/user-profile/${encodeURIComponent(id)}`);

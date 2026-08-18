@@ -241,14 +241,20 @@ type DuplicateService interface {
 	ForUser(userID uint64, limit int) (map[string]interface{}, error)
 }
 
-// duplicateService caches ExactDuplicatePairs (a full GROUP BY over the
-// 15M-row table) the same way qualityService caches quality metrics -- kept
-// fresh on a timer, never hardcoded, but not recomputed synchronously per request.
+// duplicateService caches ExactDuplicatePairs and DuplicateGroupsByIP (both
+// full GROUP BY scans over ws_user/ws_user_activity) the same way
+// qualityService caches quality metrics -- kept fresh on a timer, never
+// hardcoded, but not recomputed synchronously per request. Without this,
+// DuplicateGroupsByIP was measured taking 7-15s live per call (full scan +
+// aggregation of all 2M ws_user_activity rows), which is what made the
+// duplicates tab look "broken"/hung in the deployed frontend.
 const exactPairsCacheSize = 1000
+const ipGroupsCacheSize = 200
 
 type duplicateService struct {
-	repo         repository.AnalyticsRepository
-	cachedPairs  atomic.Pointer[[]repository.DuplicatePair]
+	repo        repository.AnalyticsRepository
+	cachedPairs atomic.Pointer[[]repository.DuplicatePair]
+	cachedIPs   atomic.Pointer[[]repository.IPDuplicateGroup]
 }
 
 func NewDuplicateService(repo repository.AnalyticsRepository) DuplicateService {
@@ -268,12 +274,19 @@ func (s *duplicateService) refresh() {
 	if pairs, err := s.repo.ExactDuplicatePairs(exactPairsCacheSize); err == nil {
 		s.cachedPairs.Store(&pairs)
 	}
+	if groups, err := s.repo.DuplicateGroupsByIP(ipGroupsCacheSize); err == nil {
+		s.cachedIPs.Store(&groups)
+	}
 }
 
 func (s *duplicateService) FindByIP(limit int) (map[string]interface{}, error) {
-	groups, err := s.repo.DuplicateGroupsByIP(limit)
-	if err != nil {
-		return nil, err
+	cached := s.cachedIPs.Load()
+	if cached == nil {
+		return nil, fmt.Errorf("ip duplicate groups not yet computed")
+	}
+	groups := *cached
+	if limit < len(groups) {
+		groups = groups[:limit]
 	}
 	out := make([]map[string]interface{}, 0, len(groups))
 	totalUsers := 0
