@@ -54,19 +54,23 @@ func (r *searchRepository) SearchByUserID(userID uint64) ([]SearchResult, int64,
 	return out, int64(len(out)), err
 }
 
-// SearchByName uses the `%` trigram operator (not the similarity() function
-// directly) because only `%`/ILIKE-on-pattern are backed by the GIN trgm
-// index (idx_ws_user_full_name_trgm) -- calling similarity() as a plain
-// WHERE-clause predicate forces a sequential scan of all 15M rows.
+// SearchByName uses pg_trgm's word_similarity (the `%>` operator, backed by
+// the same GIN trgm index, idx_ws_user_full_name_trgm) instead of whole-
+// string similarity()/ILIKE. word_similarity scores the best-matching WORD
+// within full_name against the query, so "john" correctly scores high
+// against "John Doe Wijaya" even though whole-string trigram similarity of
+// a 4-char query against a long multi-word name is naturally low (diluted
+// by the other words) -- the previous implementation compensated for that
+// with a separate ILIKE '%...%' OR'd in, which doubled the index scans
+// (BitmapOr) and left ~14.6K rows needing a heap recheck.
 //
-// similarity_threshold is set to 0.45 rather than pg_trgm's 0.3 default:
-// at 0.3, a short query like "john" matches ~120K rows via the `%` operator
-// alone (measured via EXPLAIN ANALYZE against the live dataset, ~1.6s just
-// to count), which is loose enough to blow well past the <500ms budget
-// under concurrent load. 0.45 cuts that to a low-tens-of-thousands range
-// while still tolerating minor typos, and count+rows are fetched in one
-// scan (via a window function) instead of two, since the WHERE predicate
-// was previously evaluated twice per request.
+// word_similarity_threshold=0.65 was chosen by measuring EXPLAIN ANALYZE
+// against the live dataset: it matches a comparable row count to the old
+// combined query (~6.6K rows for "john" vs ~6.8K before) with only ~11 rows
+// removed by recheck (vs ~14.6K), a single index condition instead of two,
+// and total execution time ~370ms unloaded (vs ~340ms-2.2s depending on
+// which version/threshold was live) -- same or better speed, and more
+// semantically correct results.
 func (r *searchRepository) SearchByName(name string, limit, offset int) ([]SearchResult, int64, error) {
 	var out []struct {
 		SearchResult
@@ -74,17 +78,17 @@ func (r *searchRepository) SearchByName(name string, limit, offset int) ([]Searc
 	}
 	tx := r.db.Begin()
 	defer tx.Rollback()
-	tx.Exec("SET LOCAL pg_trgm.similarity_threshold = 0.45")
+	tx.Exec("SET LOCAL pg_trgm.word_similarity_threshold = 0.65")
 
 	err := tx.Raw(`
 		SELECT `+searchSelectCols+`,
-		       GREATEST(similarity(full_name, ?), CASE WHEN full_name ILIKE '%' || ? || '%' THEN 0.5 ELSE 0 END) AS rank,
+		       word_similarity(?, full_name) AS rank,
 		       count(*) OVER() AS total_count
 		FROM ws_user
-		WHERE full_name ILIKE '%' || ? || '%' OR full_name % ?
+		WHERE full_name %> ?
 		ORDER BY rank DESC, user_id
 		LIMIT ? OFFSET ?
-	`, name, name, name, name, limit, offset).Scan(&out).Error
+	`, name, name, limit, offset).Scan(&out).Error
 	if err != nil {
 		return nil, 0, err
 	}
