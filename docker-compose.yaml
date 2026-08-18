@@ -1,40 +1,40 @@
 services:
-  postgres:
-    image: postgres:16
-    container_name: lomba_postgres
-    restart: unless-stopped
-    environment:
-      POSTGRES_USER: ${POSTGRES_USER:-lomba}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-lomba}
-      POSTGRES_DB: ${POSTGRES_DB:-lomba_challenge}
-      POSTGRES_INITDB_ARGS: "--locale=C --encoding=UTF8"
-    ports:
-      - "5432:5432"
-    volumes:
-      - pgdata:/var/lib/postgresql/data
-      - ${DB_DUMP_PATH:-./db/challenge_db_anonymized_v2.sql}:/docker-entrypoint-initdb.d/01-init.sql:ro
-    shm_size: "1gb"
-    command:
-      - "postgres"
-      - "-c"
-      - "shared_buffers=2GB"
-      - "-c"
-      - "effective_cache_size=5GB"
-      - "-c"
-      - "work_mem=64MB"
-      - "-c"
-      - "maintenance_work_mem=512MB"
-      - "-c"
-      - "max_wal_size=4GB"
-      - "-c"
-      - "checkpoint_completion_target=0.9"
-      - "-c"
-      - "random_page_cost=1.1"
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-lomba} -d ${POSTGRES_DB:-lomba_challenge}"]
-      interval: 5s
-      timeout: 5s
-      retries: 20
+  # postgres:
+  #   image: postgres:16
+  #   container_name: lomba_postgres
+  #   restart: unless-stopped
+  #   environment:
+  #     POSTGRES_USER: ${POSTGRES_USER:-lomba}
+  #     POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-lomba}
+  #     POSTGRES_DB: ${POSTGRES_DB:-lomba_challenge}
+  #     POSTGRES_INITDB_ARGS: "--locale=C --encoding=UTF8"
+  #   ports:
+  #     - "5432:5432"
+  #   volumes:
+  #     - pgdata:/var/lib/postgresql/data
+  #     - ${DB_DUMP_PATH:-./db/challenge_db_anonymized_v2.sql}:/docker-entrypoint-initdb.d/01-init.sql:ro
+  #   shm_size: "1gb"
+  #   command:
+  #     - "postgres"
+  #     - "-c"
+  #     - "shared_buffers=2GB"
+  #     - "-c"
+  #     - "effective_cache_size=5GB"
+  #     - "-c"
+  #     - "work_mem=64MB"
+  #     - "-c"
+  #     - "maintenance_work_mem=512MB"
+  #     - "-c"
+  #     - "max_wal_size=4GB"
+  #     - "-c"
+  #     - "checkpoint_completion_target=0.9"
+  #     - "-c"
+  #     - "random_page_cost=1.1"
+  #   healthcheck:
+  #     test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-lomba} -d ${POSTGRES_DB:-lomba_challenge}"]
+  #     interval: 5s
+  #     timeout: 5s
+  #     retries: 20
 
   jaeger:
     image: jaegertracing/all-in-one:1.58

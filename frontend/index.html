@@ -1,8 +1,433 @@
 <!doctype html>
-<html>
-<head><meta charset="utf-8"><title>17an Challenge — Placeholder</title></head>
-<body style="font-family: system-ui; max-width: 640px; margin: 4rem auto; line-height: 1.6;">
-  <h1>Frontend placeholder</h1>
-  <p>The real dashboard UI goes here. Backend API is at <code>/api/*</code> (proxied) or <code>http://localhost:3000</code> directly.</p>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Customer Intelligence Platform</title>
+<style>
+  :root {
+    --bg: #0f1117; --panel: #171a24; --border: #2a2e3d;
+    --text: #e7e9ee; --muted: #9aa0ae; --accent: #4f8cff;
+    --ok: #34c77b; --warn: #f5a623; --bad: #f2545b;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+    background: var(--bg); color: var(--text);
+  }
+  header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 1rem 1.5rem; border-bottom: 1px solid var(--border);
+    flex-wrap: wrap; gap: .75rem;
+  }
+  header h1 { font-size: 1.1rem; margin: 0; }
+  #health-badge {
+    font-size: .85rem; padding: .3rem .7rem; border-radius: 999px;
+    border: 1px solid var(--border); display: flex; align-items: center; gap: .4rem;
+  }
+  .dot { width: .5rem; height: .5rem; border-radius: 50%; background: var(--muted); }
+  .dot.ok { background: var(--ok); } .dot.bad { background: var(--bad); }
+
+  nav { display: flex; gap: .5rem; padding: 0 1.5rem; border-bottom: 1px solid var(--border); overflow-x: auto; }
+  nav button {
+    background: none; border: none; color: var(--muted); padding: .8rem 1rem;
+    cursor: pointer; font-size: .9rem; border-bottom: 2px solid transparent; white-space: nowrap;
+  }
+  nav button.active { color: var(--text); border-color: var(--accent); }
+
+  main { padding: 1.5rem; max-width: 1100px; margin: 0 auto; }
+  section { display: none; }
+  section.active { display: block; }
+
+  .panel { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 1.25rem; margin-bottom: 1rem; }
+  .row { display: flex; gap: .6rem; flex-wrap: wrap; align-items: center; }
+  input, select, button.action {
+    background: #11141c; border: 1px solid var(--border); color: var(--text);
+    padding: .55rem .7rem; border-radius: 6px; font-size: .9rem;
+  }
+  input { flex: 1; min-width: 180px; }
+  button.action { background: var(--accent); border-color: var(--accent); color: #fff; cursor: pointer; font-weight: 600; }
+  button.action:hover { opacity: .9; }
+  button.action:disabled { opacity: .5; cursor: default; }
+  button.secondary { background: #11141c; border-color: var(--border); color: var(--text); cursor: pointer; }
+
+  table { width: 100%; border-collapse: collapse; margin-top: 1rem; font-size: .85rem; }
+  th, td { text-align: left; padding: .5rem .6rem; border-bottom: 1px solid var(--border); white-space: nowrap; }
+  th { color: var(--muted); font-weight: 600; }
+  td.mono { font-family: ui-monospace, monospace; }
+
+  .meta { color: var(--muted); font-size: .8rem; margin-top: .5rem; }
+  .error { color: var(--bad); font-size: .85rem; margin-top: .5rem; }
+  .loading { color: var(--muted); font-size: .85rem; margin-top: .5rem; }
+
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: .8rem; }
+  .card { background: #11141c; border: 1px solid var(--border); border-radius: 8px; padding: 1rem; }
+  .card h3 { margin: 0 0 .5rem; font-size: .8rem; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: .04em; }
+  .card .big { font-size: 1.6rem; font-weight: 700; }
+  .bar { height: 6px; border-radius: 999px; background: var(--border); margin-top: .6rem; overflow: hidden; }
+  .bar > span { display: block; height: 100%; background: var(--accent); }
+
+  @media (max-width: 640px) {
+    header, main { padding: 1rem; }
+    th, td { white-space: normal; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>🔍 Customer Intelligence Platform</h1>
+  <div id="health-badge"><span class="dot"></span><span id="health-text">checking...</span></div>
+</header>
+
+<nav>
+  <button data-tab="search" class="active">Search</button>
+  <button data-tab="quality">Data Quality</button>
+  <button data-tab="duplicates">Duplicates</button>
+  <button data-tab="profile">User Profile</button>
+</nav>
+
+<main>
+
+  <!-- Round 2: Search -->
+  <section id="tab-search" class="active">
+    <div class="panel">
+      <div class="row">
+        <input id="search-q" placeholder="Cari email / phone / user_id / nama..." />
+        <select id="search-type">
+          <option value="name">Nama (fuzzy)</option>
+          <option value="email">Email (exact)</option>
+          <option value="phone">Phone (exact)</option>
+          <option value="user_id">User ID (exact)</option>
+        </select>
+        <button class="action" id="search-btn">Cari</button>
+      </div>
+      <div class="meta" id="search-meta"></div>
+      <div class="loading" id="search-loading" style="display:none;">Mencari...</div>
+      <div class="error" id="search-error" style="display:none;"></div>
+      <div style="overflow-x:auto;">
+        <table id="search-table" style="display:none;">
+          <thead>
+            <tr><th>User ID</th><th>Nama</th><th>Email</th><th>Phone</th><th>Status</th><th>Dibuat</th></tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+      <div class="row" id="search-pagination" style="display:none; margin-top:.75rem;">
+        <button class="secondary" id="search-prev">&larr; Prev</button>
+        <span class="meta" id="search-page-label"></span>
+        <button class="secondary" id="search-next">Next &rarr;</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- Round 3: Data Quality -->
+  <section id="tab-quality">
+    <div class="panel">
+      <div class="row">
+        <button class="action" id="quality-refresh">Refresh Quality Report</button>
+        <span class="meta" id="quality-meta"></span>
+      </div>
+      <div class="loading" id="quality-loading" style="display:none;">Menghitung...</div>
+      <div class="error" id="quality-error" style="display:none;"></div>
+      <div id="quality-cards" class="grid" style="margin-top:1rem;"></div>
+      <div style="overflow-x:auto;">
+        <table id="quality-issues" style="display:none; margin-top:1.5rem;">
+          <thead><tr><th>Field</th><th>Issue</th><th>Count</th><th>Severity</th><th>Contoh</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- Round 4: Duplicates -->
+  <section id="tab-duplicates">
+    <div class="panel">
+      <div class="row">
+        <button class="action" id="dup-ip-btn">Cari Duplikat via IP Address</button>
+        <button class="secondary" id="dup-exact-btn">Cari Duplikat Email/Phone Exact</button>
+      </div>
+      <div class="loading" id="dup-loading" style="display:none;">Mencari duplikat...</div>
+      <div class="error" id="dup-error" style="display:none;"></div>
+      <div class="meta" id="dup-meta"></div>
+      <div style="overflow-x:auto;">
+        <table id="dup-table" style="display:none;">
+          <thead><tr id="dup-thead"></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- Round 5: User Profile (4-table join) -->
+  <section id="tab-profile">
+    <div class="panel">
+      <div class="row">
+        <input id="profile-id" placeholder="user_id, misal: 18217221" />
+        <button class="action" id="profile-btn">Lihat Profile</button>
+      </div>
+      <div class="loading" id="profile-loading" style="display:none;">Memuat...</div>
+      <div class="error" id="profile-error" style="display:none;"></div>
+      <div id="profile-cards" class="grid" style="margin-top:1rem;"></div>
+    </div>
+  </section>
+
+</main>
+
+<script>
+const API_BASE = `${location.protocol}//${location.hostname}:3000`;
+
+function fmtMs(ms) { return ms == null ? '-' : `${ms} ms`; }
+function fmtNum(n) { return n == null ? '-' : Number(n).toLocaleString('id-ID'); }
+function fmtDate(s) { return s ? new Date(s).toLocaleString('id-ID') : '-'; }
+function esc(s) { return s == null ? '' : String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+async function apiFetch(path, opts) {
+  const res = await fetch(`${API_BASE}${path}`, opts);
+  const body = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(body.error || `HTTP ${res.status}`);
+  return body;
+}
+
+// ---- Tabs ----
+document.querySelectorAll('nav button').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('main section').forEach(s => s.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById(`tab-${btn.dataset.tab}`).classList.add('active');
+  });
+});
+
+// ---- Health ----
+async function checkHealth() {
+  const dot = document.querySelector('#health-badge .dot');
+  const text = document.getElementById('health-text');
+  try {
+    const h = await apiFetch('/api/health');
+    dot.className = 'dot ok';
+    text.textContent = `${h.status} · ${fmtNum(h.total_records)} users`;
+  } catch (e) {
+    dot.className = 'dot bad';
+    text.textContent = 'API tidak terhubung';
+  }
+}
+checkHealth();
+setInterval(checkHealth, 30000);
+
+// ---- Round 2: Search ----
+let searchOffset = 0;
+const SEARCH_LIMIT = 10;
+
+async function runSearch(resetOffset) {
+  if (resetOffset) searchOffset = 0;
+  const q = document.getElementById('search-q').value.trim();
+  const type = document.getElementById('search-type').value;
+  const errEl = document.getElementById('search-error');
+  const loadingEl = document.getElementById('search-loading');
+  const tableEl = document.getElementById('search-table');
+  const metaEl = document.getElementById('search-meta');
+  const pagEl = document.getElementById('search-pagination');
+  errEl.style.display = 'none';
+  tableEl.style.display = 'none';
+  pagEl.style.display = 'none';
+  if (!q) { errEl.textContent = 'Masukkan kata kunci pencarian.'; errEl.style.display = 'block'; return; }
+
+  loadingEl.style.display = 'block';
+  try {
+    const data = await apiFetch(`/api/search?q=${encodeURIComponent(q)}&type=${type}&limit=${SEARCH_LIMIT}&offset=${searchOffset}`);
+    const tbody = tableEl.querySelector('tbody');
+    tbody.innerHTML = '';
+    if (!data.results || data.results.length === 0) {
+      metaEl.textContent = `Tidak ada hasil untuk "${q}".`;
+    } else {
+      for (const r of data.results) {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td class="mono">${esc(r.user_id)}</td>
+          <td>${esc(r.full_name) || '-'}</td>
+          <td>${esc(r.user_email) || '<span style="color:var(--muted)">missing</span>'}</td>
+          <td>${esc(r.msisdn) || '<span style="color:var(--muted)">missing</span>'}</td>
+          <td>${esc(r.status)}</td>
+          <td>${fmtDate(r.created_at)}</td>`;
+        tbody.appendChild(tr);
+      }
+      tableEl.style.display = 'table';
+      pagEl.style.display = 'flex';
+      document.getElementById('search-page-label').textContent =
+        `${searchOffset + 1}-${searchOffset + data.results.length} dari ${fmtNum(data.total)}`;
+      document.getElementById('search-prev').disabled = searchOffset === 0;
+      document.getElementById('search-next').disabled = searchOffset + SEARCH_LIMIT >= data.total;
+    }
+    metaEl.textContent = `${fmtNum(data.total)} hasil · ${fmtMs(data.took_ms)}`;
+  } catch (e) {
+    errEl.textContent = e.message;
+    errEl.style.display = 'block';
+  } finally {
+    loadingEl.style.display = 'none';
+  }
+}
+document.getElementById('search-btn').addEventListener('click', () => runSearch(true));
+document.getElementById('search-q').addEventListener('keydown', e => { if (e.key === 'Enter') runSearch(true); });
+document.getElementById('search-prev').addEventListener('click', () => { searchOffset = Math.max(0, searchOffset - SEARCH_LIMIT); runSearch(false); });
+document.getElementById('search-next').addEventListener('click', () => { searchOffset += SEARCH_LIMIT; runSearch(false); });
+
+// ---- Round 3: Data Quality ----
+function qualityCard(title, presentPct, lines) {
+  const div = document.createElement('div');
+  div.className = 'card';
+  div.innerHTML = `<h3>${esc(title)}</h3><div class="big">${presentPct}</div>
+    <div class="bar"><span style="width:${Math.max(0, Math.min(100, parseFloat(presentPct)))}%"></span></div>
+    <div class="meta" style="margin-top:.6rem;">${lines.join('<br>')}</div>`;
+  return div;
+}
+
+async function loadQuality() {
+  const loadingEl = document.getElementById('quality-loading');
+  const errEl = document.getElementById('quality-error');
+  const cardsEl = document.getElementById('quality-cards');
+  const issuesEl = document.getElementById('quality-issues');
+  const metaEl = document.getElementById('quality-meta');
+  errEl.style.display = 'none';
+  loadingEl.style.display = 'block';
+  cardsEl.innerHTML = '';
+  issuesEl.style.display = 'none';
+  try {
+    const data = await apiFetch('/api/quality');
+    const m = data.quality_metrics;
+    metaEl.textContent = `${fmtNum(data.total_records)} records · dianalisis ${fmtDate(data.analyzed_at)}`;
+
+    cardsEl.appendChild(qualityCard('Email', `${(100 - m.email.missing_percent).toFixed(1)}%`, [
+      `${fmtNum(m.email.present)} terisi, ${fmtNum(m.email.missing_count)} kosong (${m.email.missing_percent}%)`,
+      `${fmtNum(m.email.duplicate_count)} duplikat · ${fmtNum(m.email.invalid_format)} format salah`,
+    ]));
+    cardsEl.appendChild(qualityCard('Phone', `${(100 - m.phone.missing_percent).toFixed(1)}%`, [
+      `${fmtNum(m.phone.present)} terisi, ${fmtNum(m.phone.missing_count)} kosong (${m.phone.missing_percent}%)`,
+      `${fmtNum(m.phone.duplicate_count)} duplikat · ${fmtNum(m.phone.malformed)} malformed`,
+    ]));
+    cardsEl.appendChild(qualityCard('Birth Date', `${(100 - m.birth_date.missing_percent).toFixed(1)}%`, [
+      `${fmtNum(m.birth_date.present)} terisi, ${fmtNum(m.birth_date.missing_count)} kosong (${m.birth_date.missing_percent}%)`,
+      `${fmtNum(m.birth_date.impossible_dates)} impossible · ${fmtNum(m.birth_date.future_dates)} tanggal masa depan`,
+    ]));
+    cardsEl.appendChild(qualityCard('Hobbies', `${(100 - m.hobbies.null_percent).toFixed(1)}%`, [
+      `${fmtNum(m.hobbies.null_count)} NULL (${m.hobbies.null_percent}%)`,
+      `${fmtNum(m.hobbies.with_emoji)} mengandung emoji/karakter spesial`,
+    ]));
+    const statusDiv = document.createElement('div');
+    statusDiv.className = 'card';
+    statusDiv.innerHTML = `<h3>Status Distribution</h3>` +
+      Object.entries(m.status.distribution).map(([k, v]) => `<div style="margin-top:.3rem;">${esc(k)}: <b>${fmtNum(v)}</b></div>`).join('');
+    cardsEl.appendChild(statusDiv);
+
+    const tbody = issuesEl.querySelector('tbody');
+    tbody.innerHTML = '';
+    for (const issue of (data.data_issues || [])) {
+      const tr = document.createElement('tr');
+      const color = issue.severity === 'high' ? 'var(--bad)' : issue.severity === 'medium' ? 'var(--warn)' : 'var(--muted)';
+      tr.innerHTML = `<td>${esc(issue.field)}</td><td>${esc(issue.issue_type)}</td><td>${fmtNum(issue.count)}</td>
+        <td style="color:${color}">${esc(issue.severity)}</td><td class="mono">${(issue.examples || []).map(esc).join(', ')}</td>`;
+      tbody.appendChild(tr);
+    }
+    if (data.data_issues && data.data_issues.length) issuesEl.style.display = 'table';
+  } catch (e) {
+    errEl.textContent = e.message;
+    errEl.style.display = 'block';
+  } finally {
+    loadingEl.style.display = 'none';
+  }
+}
+document.getElementById('quality-refresh').addEventListener('click', loadQuality);
+
+// ---- Round 4: Duplicates ----
+async function loadDuplicatesByIP() {
+  const loadingEl = document.getElementById('dup-loading');
+  const errEl = document.getElementById('dup-error');
+  const tableEl = document.getElementById('dup-table');
+  const metaEl = document.getElementById('dup-meta');
+  errEl.style.display = 'none'; tableEl.style.display = 'none';
+  loadingEl.style.display = 'block';
+  try {
+    const data = await apiFetch('/api/duplicates/find?method=ip_address&limit=20');
+    document.getElementById('dup-thead').innerHTML =
+      '<th>IP Address</th><th>Jumlah User</th><th>User IDs</th><th>Aktivitas Pertama</th><th>Aktivitas Terakhir</th><th>Confidence</th>';
+    const tbody = tableEl.querySelector('tbody');
+    tbody.innerHTML = '';
+    for (const g of data.duplicate_groups) {
+      const tr = document.createElement('tr');
+      const ids = (g.user_ids || []).slice(0, 6).join(', ') + (g.user_ids.length > 6 ? ', ...' : '');
+      tr.innerHTML = `<td class="mono">${esc(g.shared_attribute)}</td><td>${fmtNum(g.user_count)}</td>
+        <td class="mono">${esc(ids)}</td><td>${fmtDate(g.first_activity)}</td><td>${fmtDate(g.last_activity)}</td>
+        <td>${esc(g.confidence)}</td>`;
+      tbody.appendChild(tr);
+    }
+    metaEl.textContent = `${fmtNum(data.total_groups_found)} grup ditemukan · ${fmtNum(data.total_duplicate_users)} user terlibat`;
+    tableEl.style.display = 'table';
+  } catch (e) {
+    errEl.textContent = e.message; errEl.style.display = 'block';
+  } finally {
+    loadingEl.style.display = 'none';
+  }
+}
+
+async function loadDuplicatesExact() {
+  const loadingEl = document.getElementById('dup-loading');
+  const errEl = document.getElementById('dup-error');
+  const tableEl = document.getElementById('dup-table');
+  const metaEl = document.getElementById('dup-meta');
+  errEl.style.display = 'none'; tableEl.style.display = 'none';
+  loadingEl.style.display = 'block';
+  try {
+    const data = await apiFetch('/api/duplicates', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ limit: 50 }),
+    });
+    document.getElementById('dup-thead').innerHTML = '<th>User ID 1</th><th>User ID 2</th><th>Match Type</th><th>Similarity</th>';
+    const tbody = tableEl.querySelector('tbody');
+    tbody.innerHTML = '';
+    for (const d of data.duplicates) {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `<td class="mono">${esc(d.id1)}</td><td class="mono">${esc(d.id2)}</td><td>${esc(d.match_type)}</td><td>${esc(d.similarity)}</td>`;
+      tbody.appendChild(tr);
+    }
+    metaEl.textContent = `${fmtNum(data.count)} pasangan duplikat (exact email/phone match)`;
+    tableEl.style.display = 'table';
+  } catch (e) {
+    errEl.textContent = e.message; errEl.style.display = 'block';
+  } finally {
+    loadingEl.style.display = 'none';
+  }
+}
+document.getElementById('dup-ip-btn').addEventListener('click', loadDuplicatesByIP);
+document.getElementById('dup-exact-btn').addEventListener('click', loadDuplicatesExact);
+
+// ---- Round 5: User Profile ----
+async function loadProfile() {
+  const id = document.getElementById('profile-id').value.trim();
+  const loadingEl = document.getElementById('profile-loading');
+  const errEl = document.getElementById('profile-error');
+  const cardsEl = document.getElementById('profile-cards');
+  errEl.style.display = 'none'; cardsEl.innerHTML = '';
+  if (!id) { errEl.textContent = 'Masukkan user_id.'; errEl.style.display = 'block'; return; }
+  loadingEl.style.display = 'block';
+  try {
+    const p = await apiFetch(`/api/user-profile/${encodeURIComponent(id)}`);
+    const card = (title, big, sub) => {
+      const div = document.createElement('div');
+      div.className = 'card';
+      div.innerHTML = `<h3>${esc(title)}</h3><div class="big">${big}</div><div class="meta" style="margin-top:.5rem;">${sub}</div>`;
+      return div;
+    };
+    cardsEl.appendChild(card('Profil', esc(p.full_name) || '-', `ID: ${esc(p.user_id)}<br>${esc(p.user_email) || 'no email'}<br>${esc(p.msisdn) || 'no phone'}`));
+    cardsEl.appendChild(card('Orders', fmtNum(p.order_count), 'Total order dari user ini'));
+    cardsEl.appendChild(card('Total Transaksi', `Rp ${fmtNum(p.total_transaction_amount)}`, 'Akumulasi seluruh transaksi'));
+    cardsEl.appendChild(card('Aktivitas', fmtNum(p.activity_count), `Terakhir: ${fmtDate(p.last_activity)}`));
+  } catch (e) {
+    errEl.textContent = e.message; errEl.style.display = 'block';
+  } finally {
+    loadingEl.style.display = 'none';
+  }
+}
+document.getElementById('profile-btn').addEventListener('click', loadProfile);
+document.getElementById('profile-id').addEventListener('keydown', e => { if (e.key === 'Enter') loadProfile(); });
+</script>
 </body>
 </html>
