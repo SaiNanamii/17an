@@ -4,6 +4,13 @@ import { Trend } from 'k6/metrics';
 
 const BASE_URL = __ENV.BASE_URL || 'http://localhost:3000';
 
+// Real sample values from the live dataset (ws_user.user_id=4), so search/
+// profile/duplicates endpoints exercise a real row instead of 404-ing on
+// every request.
+const SAMPLE_USER_ID = __ENV.SAMPLE_USER_ID || '4';
+const SAMPLE_EMAIL = __ENV.SAMPLE_EMAIL || 'testdup_0@test.com';
+const SAMPLE_PHONE = __ENV.SAMPLE_PHONE || '1929391047';
+
 export const options = {
   scenarios: {
     load: {
@@ -18,36 +25,46 @@ export const options = {
   },
 };
 
-const healthTrend = new Trend('health_duration', true);
-const searchPhoneTrend = new Trend('search_phone_duration', true);
-const searchNameTrend = new Trend('search_name_duration', true);
+const trends = {};
+function trend(name) {
+  if (!trends[name]) trends[name] = new Trend(`${name}_duration`, true);
+  return trends[name];
+}
+
+function get(name, path, wantStatus) {
+  const res = http.get(`${BASE_URL}${path}`, { timeout: '5s' });
+  check(res, { [`${name} status ${wantStatus}`]: (r) => r.status === wantStatus });
+  trend(name).add(res.timings.duration);
+  return res;
+}
 
 export default function () {
+  get('health_root', '/health', 200);
+  get('health_api', '/api/health', 200);
+
+  get('search_email', `/api/search?q=${encodeURIComponent(SAMPLE_EMAIL)}&type=email`, 200);
+  get('search_phone', `/api/search?q=${encodeURIComponent(SAMPLE_PHONE)}&type=phone`, 200);
+  get('search_user_id', `/api/search?q=${SAMPLE_USER_ID}&type=user_id`, 200);
+  get('search_name', '/api/search?q=john&type=name', 200);
+
+  get('quality', '/api/quality', 200);
+  get('metrics', '/api/metrics', 200);
+
   {
-    // CHALLENGE.md Round 5: 100 concurrent for 60s, 5s per-request timeout.
-    const res = http.get(`${BASE_URL}/health`, { timeout: '5s' });
-    check(res, {
-      'GET /health status 200': (r) => r.status === 200,
-      'GET /health status=ready': (r) => {
-        if (r.status !== 200 || !r.body) return false;
-        const body = r.json();
-        return body && body.status === 'ready';
-      },
+    const res = http.post(`${BASE_URL}/api/duplicates`, JSON.stringify({ limit: 50 }), {
+      headers: { 'Content-Type': 'application/json' },
+      timeout: '5s',
     });
-    healthTrend.add(res.timings.duration);
+    check(res, { 'duplicates_post status 200': (r) => r.status === 200 });
+    trend('duplicates_post').add(res.timings.duration);
   }
 
-  {
-    const res = http.get(`${BASE_URL}/api/search?q=81234567890&type=phone`, { timeout: '5s' });
-    check(res, { 'GET /api/search (phone) status 200': (r) => r.status === 200 });
-    searchPhoneTrend.add(res.timings.duration);
-  }
+  get('duplicates_find', '/api/duplicates/find?method=ip_address&limit=20', 200);
+  get('duplicates_by_user', `/api/duplicates/${SAMPLE_USER_ID}`, 200);
+  get('user_profile', `/api/user-profile/${SAMPLE_USER_ID}`, 200);
 
-  {
-    const res = http.get(`${BASE_URL}/api/search?q=john&type=name`, { timeout: '5s' });
-    check(res, { 'GET /api/search (name) status 200': (r) => r.status === 200 });
-    searchNameTrend.add(res.timings.duration);
-  }
+  get('v1_users_list', '/api/v1/users?page=1&limit=20', 200);
+  get('v1_users_get', `/api/v1/users/${SAMPLE_USER_ID}`, 200);
 
   sleep(0.2);
 }

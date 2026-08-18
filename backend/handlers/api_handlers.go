@@ -70,6 +70,9 @@ func (h *APIHandler) Search(c *fiber.Ctx) error {
 	if q == "" || searchType == "" {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "q and type are required"})
 	}
+	if len(q) > 200 {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "q is too long (max 200 chars)"})
+	}
 
 	results, total, err := h.SearchSvc.Search(searchType, q, limit, offset)
 	if err != nil {
