@@ -25,16 +25,22 @@ export const options = {
   },
 };
 
+// k6 requires every metric to be declared in the init context (top-level,
+// executed once at script load), not lazily on first use inside the VU
+// loop -- doing it lazily threw a script exception on every request past
+// the first, silently killing the rest of each iteration.
+const ENDPOINT_NAMES = [
+  'health_root', 'health_api', 'search_email', 'search_phone', 'search_user_id',
+  'search_name', 'quality', 'metrics', 'duplicates_post', 'duplicates_find',
+  'duplicates_by_user', 'user_profile', 'v1_users_list', 'v1_users_get',
+];
 const trends = {};
-function trend(name) {
-  if (!trends[name]) trends[name] = new Trend(`${name}_duration`, true);
-  return trends[name];
-}
+for (const name of ENDPOINT_NAMES) trends[name] = new Trend(`${name}_duration`, true);
 
 function get(name, path, wantStatus) {
   const res = http.get(`${BASE_URL}${path}`, { timeout: '5s' });
   check(res, { [`${name} status ${wantStatus}`]: (r) => r.status === wantStatus });
-  trend(name).add(res.timings.duration);
+  trends[name].add(res.timings.duration);
   return res;
 }
 
@@ -56,7 +62,7 @@ export default function () {
       timeout: '5s',
     });
     check(res, { 'duplicates_post status 200': (r) => r.status === 200 });
-    trend('duplicates_post').add(res.timings.duration);
+    trends['duplicates_post'].add(res.timings.duration);
   }
 
   get('duplicates_find', '/api/duplicates/find?method=ip_address&limit=20', 200);
