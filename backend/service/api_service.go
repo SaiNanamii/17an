@@ -29,10 +29,10 @@ type healthService struct {
 
 func NewHealthService(db *gorm.DB) HealthService {
 	s := &healthService{db: db}
-	s.refresh(context.Background())
 	go func() {
 		ticker := time.NewTicker(30 * time.Second)
 		defer ticker.Stop()
+		s.refresh(context.Background())
 		for range ticker.C {
 			s.refresh(context.Background())
 		}
@@ -121,10 +121,10 @@ type qualityService struct {
 
 func NewQualityService(repo repository.AnalyticsRepository) QualityService {
 	s := &qualityService{repo: repo}
-	s.refresh()
 	go func() {
 		ticker := time.NewTicker(60 * time.Second)
 		defer ticker.Stop()
+		s.refresh()
 		for range ticker.C {
 			s.refresh()
 		}
@@ -259,10 +259,10 @@ type duplicateService struct {
 
 func NewDuplicateService(repo repository.AnalyticsRepository) DuplicateService {
 	s := &duplicateService{repo: repo}
-	s.refresh()
 	go func() {
 		ticker := time.NewTicker(60 * time.Second)
 		defer ticker.Stop()
+		s.refresh()
 		for range ticker.C {
 			s.refresh()
 		}
