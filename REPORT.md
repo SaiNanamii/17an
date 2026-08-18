@@ -78,6 +78,54 @@ All 13 routes from `backend/routes/routes.go` exercised: `/health`, `/api/health
 
 None of these push the *overall* average past the 500ms target or the failure rate past 5%, so both Round 5 acceptance criteria pass.
 
+## Run 3 — after search tuning (pg_trgm word_similarity) + timeout fixes
+
+Two more rounds of changes since Run 2:
+
+- Switched name search from whole-string `similarity()`/`ILIKE` to pg_trgm's
+  `word_similarity` (`%>` operator) — see `DATABASE_NOTES.md` for the full
+  reasoning. Tested and rejected a GiST trigram index along the way (86.9s
+  vs GIN's sub-second cost — GIN stays).
+- Added `pg_prewarm` on backend startup for the hot search indexes.
+- Caught and fixed a live bug this run surfaced: `POST /api/duplicates` and
+  `GET /api/quality` both went down for several minutes with `500 "not yet
+  computed"` because their background refresh queries ran under the
+  connection's 20s/120s timeouts instead of the intended background-only
+  budget, and kept getting cancelled under load before ever populating the
+  cache. Raised to 280s for both.
+
+```
+█ THRESHOLDS
+  http_req_duration: ✓ 'avg<500' avg=331.29ms
+  http_req_failed:   ✓ 'rate<0.05' rate=0.17%
+
+17,906 requests, 284.2 req/s, 1279 iterations completed, 0 interrupted.
+```
+
+| Endpoint | avg | p95 | success rate |
+|---|---|---|---|
+| `GET /health` | 156ms | 424ms | 100% |
+| `GET /api/health` | 193ms | 632ms | 100% |
+| `GET /api/search?type=email` | 293ms | 716ms | 99.9% |
+| `GET /api/search?type=phone` | 126ms | 360ms | 100% |
+| `GET /api/search?type=user_id` | 140ms | 364ms | 99.9% |
+| `GET /api/search?type=name` | 537ms | 3.41s | 99.6% |
+| `GET /api/quality` | 182ms | 450ms | 99.9% |
+| `GET /api/metrics` | 133ms | 361ms | 99.9% |
+| `POST /api/duplicates` | 362ms | 947ms | 99.8% |
+| `GET /api/duplicates/find` | 1.35s | 2.89s | 98.8% |
+| `GET /api/duplicates/:user_id` | 173ms | 411ms | 100% |
+| `GET /api/user-profile/:user_id` | 158ms | 372ms | 100% |
+| `GET /api/v1/users` | 702ms | 1.56s | 99.6% |
+| `GET /api/v1/users/:id` | 132ms | 363ms | 99.9% |
+| **Overall** | **331ms** | **1.27s** | **99.8%** |
+
+Name search's median dropped sharply (303ms → 104ms) even though the avg
+looks similar — the 15s result cache is doing real work absorbing repeated
+identical queries, and the underlying uncached query itself is cheaper and
+more precise (word_similarity vs whole-string similarity+ILIKE). Both
+overall thresholds pass with more margin than Run 2.
+
 ## Edge case / input validation testing
 
 Tested directly against the live deployment:
