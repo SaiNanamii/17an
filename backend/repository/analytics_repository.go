@@ -123,8 +123,18 @@ func bigWorkMemDB(db *gorm.DB) *gorm.DB {
 //     COUNT(DISTINCT ...), which would force a 15M-row sort/hash of every
 //     email string just to answer a dashboard estimate.
 func (r *analyticsRepository) QualityMetrics() (*QualityMetrics, error) {
+	// This runs from the same background refresh goroutine as
+	// ExactDuplicatePairs (never on the request path), but was previously
+	// left on the connection's default 20s statement_timeout -- and the
+	// count(*) FILTER (...) scan below was measured taking ~18-20s on its
+	// own, meaning it sat right at the edge of getting cancelled and
+	// intermittently never populated the cache. bigWorkMemDB gives it the
+	// same 280s runway as the duplicates refresh.
+	tx := bigWorkMemDB(r.db)
+	defer tx.Rollback()
+
 	var m QualityMetrics
-	err := r.db.Raw(`
+	err := tx.Raw(`
 		SELECT
 			count(*) AS total_records,
 			count(*) FILTER (WHERE user_email IS NOT NULL AND user_email <> '') AS email_present,
@@ -158,7 +168,7 @@ func (r *analyticsRepository) QualityMetrics() (*QualityMetrics, error) {
 	m.PhoneDuplicate = max0(m.PhonePresent - m.PhoneUnique)
 
 	var sampleTotal, sampleHobbiesNull, sampleHobbiesSpecial int64
-	err = r.db.Raw(`
+	err = tx.Raw(`
 		SELECT count(*),
 		       count(*) FILTER (WHERE hobbies IS NULL),
 		       count(*) FILTER (WHERE hobbies ~ '[^\x00-\x7F]')
