@@ -90,10 +90,17 @@ func NewAnalyticsRepository(db *gorm.DB) AnalyticsRepository {
 // Also lifts statement_timeout for this transaction only: these queries run
 // from a background refresh goroutine (never on the request path), so they
 // can safely take longer than the connection-wide interactive timeout.
+// Raised from 120s to 280s after observing it hit the timeout repeatedly
+// in production under concurrent load (e.g. while a k6 run was also hammering
+// every other endpoint) -- the query still finishes, just slower under I/O
+// contention on this VPS, and the goroutine loop is already sequential
+// (single ticker, one refresh() at a time), so a longer timeout here just
+// means "give the one background attempt a real chance to land" rather than
+// looping forever on 120s cancellations and never populating the cache.
 func bigWorkMemDB(db *gorm.DB) *gorm.DB {
 	tx := db.Begin()
 	tx.Exec("SET LOCAL work_mem = '512MB'")
-	tx.Exec("SET LOCAL statement_timeout = '120s'")
+	tx.Exec("SET LOCAL statement_timeout = '280s'")
 	return tx
 }
 
