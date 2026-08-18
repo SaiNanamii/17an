@@ -22,6 +22,15 @@ func (h *Handler) HealthCheck(c *fiber.Ctx) error {
 	return c.JSON(fiber.Map{"status": "ok"})
 }
 
+// ListUsers godoc
+//
+//	@Summary		List users (paginated)
+//	@Tags			users
+//	@Produce		json
+//	@Param			page	query		int	false	"default 1"
+//	@Param			limit	query		int	false	"default 20, max 100"
+//	@Success		200	{object}	map[string]interface{}
+//	@Router			/api/v1/users [get]
 func (h *Handler) ListUsers(c *fiber.Ctx) error {
 	page, _ := strconv.Atoi(c.Query("page", "1"))
 	limit, _ := strconv.Atoi(c.Query("limit", "20"))
@@ -34,6 +43,15 @@ func (h *Handler) ListUsers(c *fiber.Ctx) error {
 	return c.JSON(fiber.Map{"page": page, "limit": limit, "data": users})
 }
 
+// GetUser godoc
+//
+//	@Summary		Get one user by ID
+//	@Tags			users
+//	@Produce		json
+//	@Param			id	path		int	true	"user_id"
+//	@Success		200	{object}	map[string]interface{}
+//	@Failure		404	{object}	map[string]interface{}
+//	@Router			/api/v1/users/{id} [get]
 func (h *Handler) GetUser(c *fiber.Ctx) error {
 	id, err := strconv.ParseUint(c.Params("id"), 10, 64)
 	if err != nil {

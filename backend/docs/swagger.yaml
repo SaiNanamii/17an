@@ -1,0 +1,228 @@
+basePath: /
+info:
+  contact: {}
+  description: |-
+    Search, data quality, duplicate detection, and cross-table profile
+    lookups over a 15M-row customer dataset (CHALLENGE.md Rounds 1-5).
+  title: 17an Customer Intelligence API
+  version: "1.0"
+paths:
+  /api/duplicates:
+    post:
+      consumes:
+      - application/json
+      description: 'Top-level "WAJIB" endpoint: pairs of users sharing the same email
+        or phone'
+      parameters:
+      - description: limit (default 100, max 1000)
+        in: body
+        name: body
+        schema:
+          properties:
+            limit:
+              type: integer
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Exact duplicate pairs
+      tags:
+      - duplicates
+  /api/duplicates/{user_id}:
+    get:
+      description: 'Submission-doc alias: other users sharing this user''s email/phone'
+      parameters:
+      - description: user_id
+        in: path
+        name: user_id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Duplicate candidates for one user
+      tags:
+      - duplicates
+  /api/duplicates/find:
+    get:
+      description: 'Round 4: groups of users sharing the same IP address (ws_user_activity)'
+      parameters:
+      - description: currently only ip_address
+        in: query
+        name: method
+        type: string
+      - description: default 50, max 500
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Duplicate account clusters
+      tags:
+      - duplicates
+  /api/health:
+    get:
+      description: 'Round 1: DB connectivity + cached total row count'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Health check
+      tags:
+      - health
+  /api/metrics:
+    get:
+      description: 'Top-level "WAJIB" shape: duplicates, missing_fields, quality_score'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Slim quality metrics
+      tags:
+      - quality
+  /api/quality:
+    get:
+      description: 'Round 3: missing/duplicate/invalid-format breakdown across email,
+        phone, birth_date, hobbies, status'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Data quality report
+      tags:
+      - quality
+  /api/search:
+    get:
+      description: 'Round 2: exact match for email/phone/user_id, fuzzy trigram match
+        for name'
+      parameters:
+      - description: search term
+        in: query
+        name: q
+        required: true
+        type: string
+      - description: email | phone | user_id | name
+        in: query
+        name: type
+        required: true
+        type: string
+      - description: default 10, max 100
+        in: query
+        name: limit
+        type: integer
+      - description: default 0
+        in: query
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Search customers
+      tags:
+      - search
+  /api/user-profile/{user_id}:
+    get:
+      description: 'Round 5: user + order count/total transaction amount + activity
+        count/last activity (4-table JOIN)'
+      parameters:
+      - description: user_id
+        in: path
+        name: user_id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Cross-table user profile
+      tags:
+      - profile
+  /api/v1/users:
+    get:
+      parameters:
+      - description: default 1
+        in: query
+        name: page
+        type: integer
+      - description: default 20, max 100
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      summary: List users (paginated)
+      tags:
+      - users
+  /api/v1/users/{id}:
+    get:
+      parameters:
+      - description: user_id
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Get one user by ID
+      tags:
+      - users
+swagger: "2.0"
