@@ -12,6 +12,8 @@
     --red: #ff3b30;
     --green: #00b86b;
     --blue: #1e5eff;
+    --merah: #ce1126;
+    --putih: #ffffff;
     --shadow: 6px 6px 0 var(--ink);
     --shadow-sm: 3px 3px 0 var(--ink);
     --mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
@@ -37,12 +39,33 @@
       linear-gradient(rgba(17,17,17,.05) 1px, transparent 1px),
       linear-gradient(90deg, rgba(17,17,17,.05) 1px, transparent 1px); }
 
+  .flag-strip {
+    display: flex; height: 8px;
+  }
+  .flag-strip > span { flex: 1; }
+  .flag-strip > span:first-child { background: var(--merah); }
+  .flag-strip > span:last-child { background: var(--putih); border-bottom: 2px solid var(--ink); }
+
   header {
     display: flex; align-items: center; justify-content: space-between;
     gap: 1rem; flex-wrap: wrap;
     padding: 1.1rem 1.5rem;
     background: var(--ink); color: var(--paper);
     border-bottom: 4px solid var(--ink);
+  }
+  .hut-badge {
+    display: flex; align-items: center; gap: .5rem;
+    background: var(--merah); border: 2px solid var(--putih);
+    padding: .3rem .6rem .3rem .5rem;
+  }
+  .hut-badge .num {
+    font-family: var(--mono); font-weight: 800; font-size: 1.15rem; line-height: 1;
+    color: var(--putih); background: var(--ink); padding: .15rem .35rem;
+    border: 2px solid var(--putih);
+  }
+  .hut-badge .txt {
+    font-family: var(--grotesk); font-weight: 800; font-size: .68rem; line-height: 1.15;
+    color: var(--putih); text-transform: uppercase; letter-spacing: .03em;
   }
   header .brand { display: flex; align-items: baseline; gap: .6rem; }
   header .brand .mark {
@@ -160,6 +183,20 @@
   .bar { height: 10px; background: #fff; border: 2px solid var(--ink); margin-top: .7rem; overflow: hidden; }
   .bar > span { display: block; height: 100%; background: var(--ink); }
 
+  /* ---- Charts (inline SVG, no external library) ---- */
+  .chart-row { display: flex; gap: 1.2rem; align-items: center; flex-wrap: wrap; }
+  .donut-wrap { display: flex; align-items: center; gap: 1rem; flex: none; }
+  .donut-wrap .donut-label { font-family: var(--mono); }
+  .donut-wrap .donut-label .big { font-size: 2.2rem; font-weight: 800; line-height: 1; }
+  .donut-wrap .donut-label .sub { font-size: .72rem; color: #555; text-transform: uppercase; letter-spacing: .04em; margin-top: .25rem; }
+
+  .barchart { flex: 1; min-width: 220px; display: flex; flex-direction: column; gap: .5rem; }
+  .barchart .bc-row { display: grid; grid-template-columns: 110px 1fr 70px; align-items: center; gap: .6rem; }
+  .barchart .bc-label { font-family: var(--mono); font-size: .75rem; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .barchart .bc-track { height: 16px; background: #fff; border: 2px solid var(--ink); overflow: hidden; }
+  .barchart .bc-fill { display: block; height: 100%; }
+  .barchart .bc-val { font-family: var(--mono); font-size: .75rem; font-weight: 700; text-align: right; }
+
   footer {
     border-top: 4px solid var(--ink); padding: .9rem 1.5rem; font-family: var(--mono);
     font-size: .72rem; color: #555; display: flex; justify-content: space-between; flex-wrap: wrap; gap: .5rem;
@@ -175,12 +212,19 @@
 </head>
 <body>
 
+<div class="flag-strip"><span></span><span></span></div>
 <header>
   <div class="brand">
     <span class="mark">17AN</span>
     <h1>Customer Intelligence</h1>
   </div>
-  <div id="health-badge"><span class="dot"></span><span id="health-text">CHECKING&hellip;</span></div>
+  <div class="row" style="gap:.7rem;">
+    <div class="hut-badge" title="Dirgahayu Republik Indonesia ke-81">
+      <span class="num">81</span>
+      <span class="txt">HUT&nbsp;RI<br>1945&ndash;2026</span>
+    </div>
+    <div id="health-badge"><span class="dot"></span><span id="health-text">CHECKING&hellip;</span></div>
+  </div>
 </header>
 
 <nav>
@@ -279,8 +323,9 @@
 
 <footer>
   <span id="api-base-label"></span>
-  <span>15M records · postgres · fiber+gorm</span>
+  <span>15M records · postgres · fiber+gorm · Dirgahayu Indonesia ke-81 🇮🇩</span>
 </footer>
+<div class="flag-strip"><span></span><span></span></div>
 
 <script>
 const API_BASE = `${location.protocol}//${location.hostname}:3000`;
@@ -301,6 +346,40 @@ async function apiFetch(path, opts) {
 
 function showError(el, msg) { el.textContent = msg; el.style.display = 'block'; }
 function hideError(el) { el.style.display = 'none'; }
+
+// ---- Charts (inline SVG / CSS bars, zero dependencies) ----
+function donutChart(pct, bigText, subText, color) {
+  const size = 116, stroke = 16, r = (size - stroke) / 2, c = 2 * Math.PI * r;
+  const clamped = Math.max(0, Math.min(100, pct));
+  const dash = (clamped / 100) * c;
+  return `
+    <div class="donut-wrap">
+      <svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
+        <circle cx="${size/2}" cy="${size/2}" r="${r}" fill="none" stroke="#e5e1d6" stroke-width="${stroke}"/>
+        <circle cx="${size/2}" cy="${size/2}" r="${r}" fill="none" stroke="${color}" stroke-width="${stroke}"
+          stroke-dasharray="${dash} ${c - dash}" stroke-linecap="butt"
+          transform="rotate(-90 ${size/2} ${size/2})"/>
+        <circle cx="${size/2}" cy="${size/2}" r="${r}" fill="none" stroke="#111" stroke-width="2"/>
+      </svg>
+      <div class="donut-label">
+        <div class="big">${clamped.toFixed(1)}%</div>
+        <div class="sub">${esc(bigText)}</div>
+        ${subText ? `<div class="sub">${esc(subText)}</div>` : ''}
+      </div>
+    </div>`;
+}
+
+function barChart(items) {
+  const max = Math.max(1, ...items.map(i => i.value));
+  return `<div class="barchart">` + items.map(i => {
+    const pct = Math.max(0, Math.min(100, (i.value / max) * 100));
+    return `<div class="bc-row">
+      <div class="bc-label">${esc(i.label)}</div>
+      <div class="bc-track"><span class="bc-fill" style="width:${pct}%; background:${i.color || 'var(--ink)'}"></span></div>
+      <div class="bc-val">${fmtNum(i.value)}</div>
+    </div>`;
+  }).join('') + `</div>`;
+}
 
 // ---- Tabs ----
 document.querySelectorAll('nav button').forEach(btn => {
@@ -405,9 +484,26 @@ async function loadQuality() {
   cardsEl.innerHTML = '';
   issuesEl.style.display = 'none';
   try {
-    const data = await apiFetch('/api/quality');
+    const [data, metrics] = await Promise.all([apiFetch('/api/quality'), apiFetch('/api/metrics')]);
     const m = data.quality_metrics;
     metaEl.textContent = `${fmtNum(data.total_records)} records · dianalisis ${fmtDate(data.analyzed_at)}`;
+
+    const existingOverview = document.querySelector('[data-quality-overview]');
+    if (existingOverview) existingOverview.remove();
+    const overviewPanel = document.createElement('div');
+    overviewPanel.className = 'panel';
+    overviewPanel.style.padding = '1.1rem';
+    overviewPanel.dataset.qualityOverview = '1';
+    overviewPanel.innerHTML = `<div class="chart-row">
+        ${donutChart(metrics.quality_score, 'Quality Score', `${fmtNum(metrics.missing_fields)} field kosong`, 'var(--green)')}
+        ${barChart([
+          { label: 'Email', value: m.email.present, color: 'var(--blue)' },
+          { label: 'Phone', value: m.phone.present, color: 'var(--blue)' },
+          { label: 'Birth Date', value: m.birth_date.present, color: 'var(--blue)' },
+          { label: 'Hobbies', value: data.total_records - m.hobbies.null_count, color: 'var(--blue)' },
+        ])}
+      </div>`;
+    document.getElementById('tab-quality').querySelector('.panel').before(overviewPanel);
 
     cardsEl.appendChild(qualityCard('Email', `${(100 - m.email.missing_percent).toFixed(1)}%`, [
       `${fmtNum(m.email.present)} terisi, ${fmtNum(m.email.missing_count)} kosong (${m.email.missing_percent}%)`,
@@ -427,8 +523,14 @@ async function loadQuality() {
     ]));
     const statusDiv = document.createElement('div');
     statusDiv.className = 'card';
-    statusDiv.innerHTML = `<h3>Status Distribution</h3>` +
-      Object.entries(m.status.distribution).map(([k, v]) => `<div style="margin-top:.35rem; font-family:var(--mono);">${esc(k)}: <b>${fmtNum(v)}</b></div>`).join('');
+    const statusEntries = Object.entries(m.status.distribution);
+    statusDiv.innerHTML = `<h3>Status Distribution</h3>` + barChart(
+      statusEntries.map(([k, v]) => ({
+        label: k === '-1' ? 'Unverified' : k === '0' ? 'Inactive' : 'Active',
+        value: v,
+        color: k === '-1' ? 'var(--yellow)' : k === '0' ? '#bbb' : 'var(--green)',
+      }))
+    );
     cardsEl.appendChild(statusDiv);
 
     const tbody = issuesEl.querySelector('tbody');
@@ -473,6 +575,18 @@ async function loadDuplicatesByIP() {
     }
     metaEl.textContent = `${fmtNum(data.total_groups_found)} grup ditemukan · ${fmtNum(data.total_duplicate_users)} user terlibat`;
     tableEl.style.display = 'table';
+
+    const existingChart = document.querySelector('[data-dup-chart]');
+    if (existingChart) existingChart.remove();
+    if (data.duplicate_groups && data.duplicate_groups.length) {
+      const top = data.duplicate_groups.slice(0, 8);
+      const chartDiv = document.createElement('div');
+      chartDiv.dataset.dupChart = '1';
+      chartDiv.style.marginTop = '1.2rem';
+      chartDiv.innerHTML = `<div class="meta" style="margin-bottom:.3rem;">Top ${top.length} grup terbesar (per IP)</div>` +
+        barChart(top.map(g => ({ label: g.shared_attribute, value: g.user_count, color: 'var(--red)' })));
+      tableEl.parentElement.after(chartDiv);
+    }
   } catch (e) {
     showError(errEl, e.message);
   } finally {
@@ -481,6 +595,8 @@ async function loadDuplicatesByIP() {
 }
 
 async function loadDuplicatesExact() {
+  const existingChart = document.querySelector('[data-dup-chart]');
+  if (existingChart) existingChart.remove();
   const loadingEl = document.getElementById('dup-loading');
   const errEl = document.getElementById('dup-error');
   const tableEl = document.getElementById('dup-table');
