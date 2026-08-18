@@ -3,6 +3,7 @@
 -- would otherwise be a full sequential scan across 15M/3M/2.4M/2M rows.
 
 CREATE EXTENSION IF NOT EXISTS pg_trgm;
+CREATE EXTENSION IF NOT EXISTS pg_prewarm;
 
 -- Round 2: exact-match search on email / phone
 CREATE INDEX IF NOT EXISTS idx_ws_user_email_lower ON ws_user (lower(user_email));

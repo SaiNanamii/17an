@@ -44,6 +44,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("failed to connect database: %v", err)
 	}
+	database.Prewarm(db)
 
 	app := fiber.New()
 	app.Use(recover.New())
