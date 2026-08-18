@@ -1,0 +1,86 @@
+services:
+  postgres:
+    image: postgres:16
+    container_name: lomba_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-lomba}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-lomba}
+      POSTGRES_DB: ${POSTGRES_DB:-lomba_challenge}
+      POSTGRES_INITDB_ARGS: "--locale=C --encoding=UTF8"
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ${DB_DUMP_PATH:-./db/challenge_db_anonymized_v2.sql}:/docker-entrypoint-initdb.d/01-init.sql:ro
+    shm_size: "1gb"
+    command:
+      - "postgres"
+      - "-c"
+      - "shared_buffers=2GB"
+      - "-c"
+      - "effective_cache_size=5GB"
+      - "-c"
+      - "work_mem=64MB"
+      - "-c"
+      - "maintenance_work_mem=512MB"
+      - "-c"
+      - "max_wal_size=4GB"
+      - "-c"
+      - "checkpoint_completion_target=0.9"
+      - "-c"
+      - "random_page_cost=1.1"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-lomba} -d ${POSTGRES_DB:-lomba_challenge}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  jaeger:
+    image: jaegertracing/all-in-one:1.58
+    container_name: lomba_jaeger
+    restart: unless-stopped
+    environment:
+      COLLECTOR_OTLP_ENABLED: "true"
+    ports:
+      - "16686:16686" # Jaeger UI
+      - "4317:4317"   # OTLP gRPC
+      - "4318:4318"   # OTLP HTTP
+
+  backend:
+    build:
+      context: ./backend
+    container_name: lomba_backend
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      jaeger:
+        condition: service_started
+    environment:
+      PORT: 3000
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USER: ${POSTGRES_USER:-lomba}
+      DB_PASSWORD: ${POSTGRES_PASSWORD:-lomba}
+      DB_NAME: ${POSTGRES_DB:-lomba_challenge}
+      DB_MAX_OPEN_CONNS: ${DB_MAX_OPEN_CONNS:-20}
+      DB_MAX_IDLE_CONNS: ${DB_MAX_IDLE_CONNS:-10}
+      DB_CONN_MAX_LIFETIME_MINUTES: ${DB_CONN_MAX_LIFETIME_MINUTES:-30}
+      DB_CONN_MAX_IDLE_TIME_MINUTES: ${DB_CONN_MAX_IDLE_TIME_MINUTES:-5}
+      OTEL_EXPORTER_OTLP_ENDPOINT: "jaeger:4318"
+    ports:
+      - "3000:3000"
+
+  frontend:
+    build:
+      context: ./frontend
+    container_name: lomba_frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - "8080:80"
+
+volumes:
+  pgdata:
